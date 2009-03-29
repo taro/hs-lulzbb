@@ -1,0 +1,23 @@
+index:
+  url: /
+  param: { module: Index, action: view }
+
+forum:
+  url: /:forum
+  param: { module: Forum, action: view }
+
+forum_post:
+  url: /:forum/post
+  param: { module: Forum, action: post }
+
+thread:
+  url: /:forum/:thread
+  param: { module: Thread, action: view, page: 0 }
+
+thread_page:
+  url: /:forum/:thread/:page
+  param: { module: Thread, action: view }
+
+thread_post:
+  url: /:forum/:thread/post
+  param: { module: Thread, action: post }

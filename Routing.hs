@@ -7,7 +7,6 @@ import Data.Char (toLower, toUpper)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
-import Database.HDBC (IConnection)
 import Text.Regex.Posix ((=~))
 
 {-|
@@ -167,8 +166,7 @@ mergeRoutes x@(RouteEnd rp) y@(Literal _) =
 
 	etc.
 -}
-mergeRoutes x@(Parameter _) y@(Parameter (_, RouteEnd _)) = mergeRoutes y x
-mergeRoutes (Parameter (xs, xr@(RouteEnd _))) (Parameter (ys, yr)) | xs == ys =
+mergeRoutes (Parameter (xs, xr)) (Parameter (ys, yr)) | xs == ys =
 	Parameter (xs, mergeRoutes xr yr)
 
 mergeRoutes (Parameter _) (Parameter _) =
