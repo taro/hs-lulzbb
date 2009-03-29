@@ -158,8 +158,19 @@ mergeRoutes x@(RouteEnd rp) y@(Literal _) =
 
 {- 
 	Two different parameters means there are two different routes which
-	have the same URL structure 
+	have the same URL structure. This is only allowed in the case where
+	one of them terminates immediately (because we can discern it by
+	the RouteEnd), which occurs in situations like
+
+	/:x
+	/:x/:y
+
+	etc.
 -}
+mergeRoutes x@(Parameter _) y@(Parameter (_, RouteEnd _)) = mergeRoutes y x
+mergeRoutes (Parameter (xs, xr@(RouteEnd _))) (Parameter (ys, yr)) | xs == ys =
+	Parameter (xs, mergeRoutes xr yr)
+
 mergeRoutes (Parameter _) (Parameter _) =
 	throw $ ErrorCall "mergeRoutes: Unable to merge two Parameters."
 
@@ -171,7 +182,7 @@ mergeRoutes x@(Parameter _) y@(Branch _) = mergeRoutes y x
 mergeRoutes x@(Branch (xl, xp, xn)) y@(Parameter _) =
 	case xp of
 		Nothing -> Branch (xl, Just y, xn)
-		Just _ -> throw $ ErrorCall "mergeRoutes: Unable to merge Parameter into a Branch which already has a Parameter bound."
+		Just xr -> Branch (xl, Just $ mergeRoutes xr y, xn)
 
 {-
 	Parameter and RouteEnd get folded together into a Branch.
