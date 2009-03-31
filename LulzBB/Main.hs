@@ -5,7 +5,7 @@ import Routing
 
 getActionTable :: IO ActionTable
 getActionTable = do
-	return $ Map.fromAscList $ rawActionTable
+	return $ Map.fromList $ rawActionTable
 
 getUrlTree :: IO UrlTree
 getUrlTree = 
