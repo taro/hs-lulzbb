@@ -373,12 +373,27 @@ routeUrl (RouteEnd x) _ =
 -}
 route ::  UrlTree -> ActionTable -> String -> IO String
 route ut at url = 
-	let urlParts = split '/' $ dropWhile ((==) '/') url in
+	-- chop off a trailing '/', if one exists
+	let url' = if (not $ null url) && (last url == '/')
+		then init url
+		else url
+			in
+
+	-- add a leading '/', unless one exists
+	let url'' = if (null url') || (head url' /= '/')
+		then '/' : url'
+		else url' 
+			in
+
+	-- split the url parts apart and route the URL
+	let urlParts = split '/' $ dropWhile ((==) '/') url'' in
 	let params = fromMaybe [] $ routeUrl ut urlParts in
+
+	-- normalize the bits and pieces of the route parameters and resolve
 	let mod = formatModule $ fromMaybe "" $ lookup "module" params in
 	let act = formatAction $ fromMaybe "index" $ lookup "action" params in
 	let action = Map.lookup (mod, act) at :: Maybe Action in
 	
 	case action of
 		Just x -> x params
-		_ -> throw $ ErrorCall $ "route: No action `" ++ act ++ "' exists for module `" ++ mod ++ "' (while routing `" ++ url ++ "')"
+		_ -> throw $ ErrorCall $ "route: No action `" ++ act ++ "' exists for module `" ++ mod ++ "' (while routing `" ++ url'' ++ "')"

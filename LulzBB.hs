@@ -32,19 +32,6 @@ handler ut at = do
 		else return ()
 
 	let req = (drop (length baseurl) fullurl)
-
-	-- TODO: Refactor the URL shit into the Router
-
-	-- chop off a trailing '/', if one exists
-	req <- return $ if (not $ null req) && (last req == '/')
-		then init req
-		else req
-
-	-- add a leading '/', unless one exists
-	req <- return $ if (null req) || (head req /= '/')
-		then '/' : req
-		else req
-	
 	let action = route ut at req
 
 	-- Execute the action
