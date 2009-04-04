@@ -1,5 +1,6 @@
 module LulzBB.Index where
+import Database.HDBC
 import Routing (RouteParameters)
 
-view :: RouteParameters -> IO String
-view params = return "view index"
+view :: IConnection a => a -> RouteParameters -> IO String
+view db params = return "asd"

@@ -1,9 +1,10 @@
 module LulzBB.Thread where
+import Database.HDBC
 import Routing (RouteParameters)
 
-view :: RouteParameters -> IO String
-view params = return "view thread"
+view :: IConnection a => a -> RouteParameters -> IO String
+view db params = return "view thread"
 
-post :: RouteParameters -> IO String
-post params = return "post thread"
+post :: IConnection a => a -> RouteParameters -> IO String
+post db params = return "post thread"
 

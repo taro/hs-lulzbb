@@ -1,9 +1,10 @@
 module LulzBB.Forum where
+import Database.HDBC
 import Routing (RouteParameters)
 
-view :: RouteParameters -> IO String
-view params = return "view forum"
+view :: IConnection a => a -> RouteParameters -> IO String
+view db params = return "view forum"
 
-post :: RouteParameters -> IO String
-post params = return "post forum"
+post :: IConnection a => a -> RouteParameters -> IO String
+post db params = return "post forum"
 

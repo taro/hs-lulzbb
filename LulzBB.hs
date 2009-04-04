@@ -2,6 +2,8 @@ module Main where
 import Control.Exception (handle, Exception (NoMethodError))
 import Control.Monad (liftM)
 import Data.List (isPrefixOf)
+import Database.HDBC (commit, disconnect, IConnection (..))
+import Database.HDBC.PostgreSQL (connectPostgreSQL)
 import Network.CGI
 import Network.URI (uriPath)
 import LulzBB.Main
@@ -9,12 +11,16 @@ import Routing
 
 main :: IO ()
 main = do
-	at <- getActionTable
+	-- TODO: Un-hardcode this
+	db <- liftIO $ connectPostgreSQL "user=hark"
+	at <- getActionTable db
 	ut <- getUrlTree
-	runCGI $ handleErrors $ handler ut at
 
-handler :: UrlTree -> ActionTable -> CGI CGIResult
-handler ut at = do
+	runCGI $ handleErrors $ handler db ut at
+		`catchCGI` (\e -> (liftIO $ disconnect db) >> throwCGI e)
+
+handler :: IConnection a => a -> UrlTree -> ActionTable -> CGI CGIResult
+handler db ut at = do
 	setHeader "Content-Type" "text/plain"
 
 	-- TODO: Un-hardcode this
@@ -36,4 +42,9 @@ handler ut at = do
 
 	-- Execute the action
 	res <- liftIO action
+
+	-- Commit the database changes
+	liftIO $ commit db
+	
+	-- Output the data
 	output res
