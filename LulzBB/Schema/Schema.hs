@@ -12,13 +12,13 @@ tables = [
 		("parent", ColReference "post"),
 		("author", ColReference "user"),
 		("created", ColDatetime),
-		("revision", ColReference "post_revision")
+		("rev", ColReference "rev")
 	]),
-	("post_revision", [
+	("rev", [
 		("post", ColReference "post"),
 		("updated", ColDatetime),
 		("author", ColReference "user"),
-		("author_ip", ColString 16),
+		("authorIp", ColString 16),
 		("subject", ColText),
 		("body", ColText)
 	]),
