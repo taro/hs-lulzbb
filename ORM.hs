@@ -98,7 +98,10 @@ columnHs tName (colName, colType) =
 -}
 createTableSql :: Table -> String
 createTableSql (tableName, cols) = 
-	"CREATE TABLE \"" ++ tableName ++ "\" (\n\t" ++ pkey ++ columns ++ "\n);"
+	unlines [
+		"DROP TABLE IF EXISTS \"" ++ tableName ++ "\";",
+		"CREATE TABLE \"" ++ tableName ++ "\" (\n\t" ++ pkey ++ columns ++ "\n);"
+		]
 		where 
 			pkey = tableName ++ "Id INTEGER PRIMARY KEY,\n\t"
 			columns = intercalate ",\n\t" $ map (columnSql tableName) cols
@@ -133,9 +136,11 @@ createRefSql t@(tableName, _) =
 -}
 createSeqSql :: Table -> String
 createSeqSql (tableName, _) =
+	let seqName = "seq" ++ capitalize tableName in
 	unlines [
-		"CREATE SEQUENCE seq" ++ capitalize tableName ++ ";",
-		"ALTER TABLE \"" ++ tableName ++ "\" ALTER COLUMN " ++ tableName ++ "Id SET DEFAULT NEXTVAL('seq" ++ capitalize tableName ++ "');"
+		"DROP SEQUENCE IF EXISTS " ++ seqName ++ ";",
+		"CREATE SEQUENCE " ++ seqName ++ ";",
+		"ALTER TABLE \"" ++ tableName ++ "\" ALTER COLUMN " ++ tableName ++ "Id SET DEFAULT NEXTVAL('" ++ seqName ++ "');"
 	]
 
 {-|
