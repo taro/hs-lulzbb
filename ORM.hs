@@ -98,7 +98,7 @@ columnHs tName (colName, colType) =
 -}
 createTableSql :: Table -> String
 createTableSql (tableName, cols) = 
-	"CREATE TABLE " ++ tableName ++ " (\n\t" ++ pkey ++ columns ++ "\n);"
+	"CREATE TABLE \"" ++ tableName ++ "\" (\n\t" ++ pkey ++ columns ++ "\n);"
 		where 
 			pkey = tableName ++ "Id INTEGER PRIMARY KEY,\n\t"
 			columns = intercalate ",\n\t" $ map (columnSql tableName) cols
@@ -124,7 +124,7 @@ getReferences (_, cols) =
 createRefSql :: Table -> String
 createRefSql t@(tableName, _) = 
 	intercalate "\n" $ map refSql $ getReferences t
-		where refSql (colName, refTable) = "ALTER TABLE " ++ tableName ++ " ADD FOREIGN KEY (" ++ tableName ++ capitalize colName ++ ") REFERENCES " ++ refTable ++ ";"	
+		where refSql (colName, refTable) = "ALTER TABLE \"" ++ tableName ++ "\" ADD FOREIGN KEY (" ++ tableName ++ capitalize colName ++ ") REFERENCES \"" ++ refTable ++ "\";"	
 
 {-|
 	Creates the SQL to CREATE SEQUENCE and set that sequence as the default
@@ -135,7 +135,7 @@ createSeqSql :: Table -> String
 createSeqSql (tableName, _) =
 	unlines [
 		"CREATE SEQUENCE seq" ++ capitalize tableName ++ ";",
-		"ALTER TABLE " ++ tableName ++ " ALTER COLUMN " ++ tableName ++ "Id SET DEFAULT NEXTVAL('seq" ++ capitalize tableName ++ "');"
+		"ALTER TABLE \"" ++ tableName ++ "\" ALTER COLUMN " ++ tableName ++ "Id SET DEFAULT NEXTVAL('seq" ++ capitalize tableName ++ "');"
 	]
 
 {-|
