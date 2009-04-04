@@ -61,3 +61,21 @@ createRecordHs (tableName, cols) =
 			cTableName = capitalize tableName
 			pkey = tableName ++ "Id :: Integer,\n\t"
 			columns = intercalate ",\n\t" $ map (columnHs tableName) cols
+
+parserColumn :: String -> (String, ColType) -> String
+parserColumn tName (colName, ColReference _) = 
+	tName ++ capitalize colName ++ " = parseSql' pfx sql"
+parserColumn tName (colName, ColInteger) = 
+	tName ++ capitalize colName ++ " = coerseSql 0 pfx \"" ++ colName ++ "\" sql"
+parserColumn tName (colName, ColString _) =
+	tName ++ capitalize colName ++ " = coerseSql \"\" pfx \"" ++ colName ++ "\" sql"
+parserColumn tName (colName, ColText) =
+	tName ++ capitalize colName ++ " = coerseSql \"\" pfx \"" ++ colName ++ "\" sql"
+parserColumn tName (colName, ColDatetime) =
+	tName ++ capitalize colName ++ " = coerseSql 0 pfx \"" ++ colName ++ "\" sql"
+
+createParserHs :: Table -> String
+createParserHs (tableName, cols) =
+	let cTableName = capitalize tableName in
+	"parseSql' :: String -> Data.Map String SqlValue -> Maybe " ++ cTableName ++ "\nparseSql' pfx sql = \n\tcase lookup (pfx ++ \"" ++ tableName ++ "Id\" of\n\t\tNothing -> Nothing\n\t\t_ -> Just $ " ++ cTableName ++ " {\n\t\t\t" ++ columns ++ " }"
+		where columns = intercalate ",\n\t\t\t" $ map (parserColumn tableName) cols
