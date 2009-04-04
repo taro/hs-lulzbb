@@ -127,12 +127,24 @@ createRefSql t@(tableName, _) =
 		where refSql (colName, refTable) = "ALTER TABLE " ++ tableName ++ " ADD FOREIGN KEY (" ++ tableName ++ capitalize colName ++ ") REFERENCES " ++ refTable ++ ";"	
 
 {-|
+	Creates the SQL to CREATE SEQUENCE and set that sequence as the default
+	value for the primary key of the table. This only really works for
+	PostgreSQL -- will have to override (somehow lol?) for shit databases.
+-}
+createSeqSql :: Table -> String
+createSeqSql (tableName, _) =
+	unlines [
+		"CREATE SEQUENCE seq" ++ capitalize tableName ++ ";",
+		"ALTER TABLE " ++ tableName ++ " ALTER COLUMN " ++ tableName ++ "Id SET DEFAULT NEXTVAL('seq" ++ capitalize tableName ++ "');"
+	]
+
+{-|
 	Creates the Haskell code for a DbRecord which exposes all the fields
 	of the supplied table.
 -}
 createRecordHs :: Table -> String
 createRecordHs (tableName, cols) =
-	"data " ++ cTableName ++ " = " ++ cTableName ++ " {\n\t" ++ pkey ++ columns ++ "\n}"
+	"data " ++ cTableName ++ " = " ++ cTableName ++ " {\n\t" ++ pkey ++ columns ++ "\n} deriving (Show)"
 		where
 			cTableName = capitalize tableName
 			pkey = tableName ++ "Id :: Integer,\n\t"
@@ -172,6 +184,7 @@ createParserHs (tableName, cols) =
 dumpSchema :: [Table] -> String
 dumpSchema tbls = (unlines . map ($ tbls)) [
 	intercalate "\n\n" . map createTableSql,
+	intercalate "\n" . map createSeqSql,
 	intercalate "\n" . map createRefSql]
 
 {-|
