@@ -1,6 +1,8 @@
 module ORM where
 import Data.Char (toLower, toUpper)
 import Data.List (intercalate)
+import Data.Maybe (fromMaybe)
+import Database.HDBC (fromSql)
 
 data ColType = 
 	ColReference String |
@@ -15,15 +17,7 @@ capitalize :: String -> String
 capitalize "" = ""
 capitalize s = (toUpper . head) s : tail s
 
-getReferences :: Table -> [(String, String)]
-getReferences (_, cols) =
-	map formatRef $ filter onlyRefs cols
-		where
-			onlyRefs x = case x of
-				(_, ColReference _) -> True
-				_ -> False
-			formatRef (c, ColReference r) =
-				(c, r)
+coerseSql d p k = fromSql . fromMaybe d . lookup (p ++ k)
 
 typeSql :: ColType -> String
 typeSql (ColReference _) = "INTEGER"
@@ -54,6 +48,21 @@ createTableSql (tableName, cols) =
 			pkey = tableName ++ "Id INTEGER PRIMARY KEY,\n\t"
 			columns = intercalate ",\n\t" $ map (columnSql tableName) cols
 
+getReferences :: Table -> [(String, String)]
+getReferences (_, cols) =
+	map formatRef $ filter onlyRefs cols
+		where
+			onlyRefs x = case x of
+				(_, ColReference _) -> True
+				_ -> False
+			formatRef (c, ColReference r) =
+				(c, r)
+
+createRefSql :: Table -> String
+createRefSql t@(tableName, _) = 
+	intercalate "\n" $ map refSql $ getReferences t
+		where refSql (colName, refTable) = "ALTER TABLE " ++ tableName ++ " ADD FOREIGN KEY (" ++ tableName ++ capitalize colName ++ ") REFERENCES " ++ refTable ++ ";"	
+
 createRecordHs :: Table -> String
 createRecordHs (tableName, cols) =
 	"data " ++ cTableName ++ " = " ++ cTableName ++ " {\n\t" ++ pkey ++ columns ++ "\n}"
@@ -79,3 +88,26 @@ createParserHs (tableName, cols) =
 	let cTableName = capitalize tableName in
 	"parseSql' :: String -> Data.Map String SqlValue -> Maybe " ++ cTableName ++ "\nparseSql' pfx sql = \n\tcase lookup (pfx ++ \"" ++ tableName ++ "Id\" of\n\t\tNothing -> Nothing\n\t\t_ -> Just $ " ++ cTableName ++ " {\n\t\t\t" ++ columns ++ " }"
 		where columns = intercalate ",\n\t\t\t" $ map (parserColumn tableName) cols
+
+dumpSchema :: [Table] -> String
+dumpSchema tbls = (unlines . map ($ tbls)) [
+	intercalate "\n\n" . map createTableSql,
+	intercalate "\n" . map createRefSql]
+
+dumpRecordHs :: [Table] -> String
+dumpRecordHs = intercalate "\n\n" . map createRecordHs
+
+dumpParserHs :: [Table] -> String
+dumpParserHs = intercalate "\n\n" . map createParserHs
+
+dumpSchemaHs :: String -> [Table] -> String
+dumpSchemaHs siteName tbls =
+	header ++ dumpRecordHs tbls ++ "\n\n" ++ dumpParserHs tbls
+		where header =
+			unlines [
+				"module " ++ siteName ++ ".ORM where",
+				"import qualified Data.Map as Map",
+				"import ORM",
+				"",
+				"parseSql = parseSql' \"\"",
+				"" ]
