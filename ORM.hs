@@ -2,6 +2,7 @@ module ORM where
 import Data.Char (toLower, toUpper)
 import Data.List (intercalate)
 import Data.Maybe (fromMaybe)
+import qualified Data.Map as Map
 import Database.HDBC (fromSql)
 
 data ColType = 
@@ -17,7 +18,7 @@ capitalize :: String -> String
 capitalize "" = ""
 capitalize s = (toUpper . head) s : tail s
 
-coerseSql d p k = fromSql . fromMaybe d . lookup (p ++ k)
+coerseSql d p k sql = maybe d fromSql $ Map.lookup (p ++ k) sql
 
 typeSql :: ColType -> String
 typeSql (ColReference _) = "INTEGER"
@@ -86,8 +87,8 @@ parserColumn tName (colName, ColDatetime) =
 createParserHs :: Table -> String
 createParserHs (tableName, cols) =
 	let cTableName = capitalize tableName in
-	"parseSql' :: String -> Data.Map String SqlValue -> Maybe " ++ cTableName ++ "\nparseSql' pfx sql = \n\tcase lookup (pfx ++ \"" ++ tableName ++ "Id\" of\n\t\tNothing -> Nothing\n\t\t_ -> Just $ " ++ cTableName ++ " {\n\t\t\t" ++ columns ++ " }"
-		where columns = intercalate ",\n\t\t\t" $ map (parserColumn tableName) cols
+	"instance DbRecord " ++ cTableName ++ " where\n\tparseSql' pfx sql = \n\t\tcase Map.lookup (pfx ++ \"" ++ tableName ++ "Id\") sql of\n\t\t\tNothing -> Nothing\n\t\t\t_ -> Just $ " ++ cTableName ++ " {\n\t\t\t\t" ++ columns ++ " }"
+		where columns = intercalate ",\n\t\t\t\t" $ map (parserColumn tableName) $ ("id", ColInteger) : cols
 
 dumpSchema :: [Table] -> String
 dumpSchema tbls = (unlines . map ($ tbls)) [
@@ -106,8 +107,13 @@ dumpSchemaHs siteName tbls =
 		where header =
 			unlines [
 				"module " ++ siteName ++ ".ORM where",
+				"import Database.HDBC (SqlValue)",
 				"import qualified Data.Map as Map",
 				"import ORM",
 				"",
+				"parseSql :: DbRecord a => Map.Map String SqlValue -> Maybe a",
 				"parseSql = parseSql' \"\"",
-				"" ]
+				"",
+				"class DbRecord a where",
+				"\tparseSql' :: String -> Map.Map String SqlValue -> Maybe a",
+				""]
