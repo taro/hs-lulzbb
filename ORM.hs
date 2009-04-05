@@ -114,15 +114,15 @@ columnHs tName (colName, colType) =
 	Takes the table and outputs the whole CREATE TABLE statement used
 	to generate the proper schema in SQL.
 -}
-createTableSql :: Table -> String
-createTableSql (tableName, cols) = 
+createTableSql :: String -> Table -> String
+createTableSql pfx (tableName, cols) = 
 	unlines [
-		"DROP TABLE IF EXISTS \"" ++ tableName ++ "\";",
-		"CREATE TABLE \"" ++ tableName ++ "\" (\n\t" ++ pkey ++ columns ++ "\n);"
+		"DROP TABLE IF EXISTS \"" ++ pfx ++ tableName ++ "\";",
+		"CREATE TABLE \"" ++ pfx ++ tableName ++ "\" (\n\t" ++ pkey ++ columns ++ "\n);"
 		]
 		where 
 			pkey = columnNameSql tableName "Id" ++ " INTEGER PRIMARY KEY,\n\t"
-			columns = intercalate ",\n\t" $ map (columnSql tableName) cols
+			columns = intercalate ",\n\t" $ map (columnSql $ tableName) cols
 
 {-|
 	Filters out all of the ColReference columns of the table, and returns
@@ -142,23 +142,23 @@ getReferences (_, cols) =
 	Creates the SQL to add FOREIGN KEY constraints to all of the columns
 	which have a ColReference type.
 -}
-createRefSql :: Table -> String
-createRefSql t@(tableName, _) = 
+createRefSql :: String -> Table -> String
+createRefSql pfx t@(tableName, _) = 
 	intercalate "\n" $ map refSql $ getReferences t
-		where refSql (colName, refTable) = "ALTER TABLE \"" ++ tableName ++ "\" ADD FOREIGN KEY (" ++ columnNameSql tableName colName ++ ") REFERENCES \"" ++ refTable ++ "\";"	
+		where refSql (colName, refTable) = "ALTER TABLE \"" ++ pfx ++ tableName ++ "\" ADD FOREIGN KEY (" ++ columnNameSql tableName colName ++ ") REFERENCES \"" ++ pfx ++ refTable ++ "\";"	
 
 {-|
 	Creates the SQL to CREATE SEQUENCE and set that sequence as the default
 	value for the primary key of the table. This only really works for
 	PostgreSQL -- will have to override (somehow lol?) for shit databases.
 -}
-createSeqSql :: Table -> String
-createSeqSql (tableName, _) =
+createSeqSql :: String -> Table -> String
+createSeqSql pfx (tableName, _) =
 	let seqName = columnNameSql "seq" (tableName ++ "Id") in
 	unlines [
 		"DROP SEQUENCE IF EXISTS " ++ seqName ++ ";",
 		"CREATE SEQUENCE " ++ seqName ++ ";",
-		"ALTER TABLE \"" ++ tableName ++ "\" ALTER COLUMN " ++ columnNameSql tableName "Id" ++ " SET DEFAULT NEXTVAL('" ++ seqName ++ "');"
+		"ALTER TABLE \"" ++ pfx ++ tableName ++ "\" ALTER COLUMN " ++ columnNameSql tableName "Id" ++ " SET DEFAULT NEXTVAL('" ++ seqName ++ "');"
 	]
 
 {-|
@@ -202,13 +202,14 @@ createParserHs (tableName, cols) =
 
 {-|
 	Takes a list of tables and returns the complete SQL listing to 
-	produce the schema. (CREATE TABLE and ADD FOREIGN KEY).
+	produce the schema. (CREATE TABLE and ADD FOREIGN KEY). First
+	argument is a prefix which is appended to all table names.
 -}
-dumpSchema :: [Table] -> String
-dumpSchema tbls = (unlines . map ($ tbls)) [
-	intercalate "\n\n" . map createTableSql,
-	intercalate "\n" . map createSeqSql,
-	intercalate "\n" . map createRefSql]
+dumpSchema :: String -> [Table] -> String
+dumpSchema pfx tbls = (unlines . map ($ tbls)) [
+	intercalate "\n\n" . map (createTableSql pfx),
+	intercalate "\n" . map (createSeqSql pfx),
+	intercalate "\n" . map (createRefSql pfx)]
 
 {-|
 	Converts a list of tables into a bunch of Haskell record definitions.
