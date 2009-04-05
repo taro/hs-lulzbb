@@ -182,13 +182,13 @@ parserColumn :: String -> (String, ColType) -> String
 parserColumn tName (colName, ColReference _) = 
 	tName ++ capitalize colName ++ " = parseSql' pfx sql"
 parserColumn tName (colName, ColInteger) = 
-	tName ++ capitalize colName ++ " = coerseSql 0 pfx \"" ++ colName ++ "\" sql"
+	tName ++ capitalize colName ++ " = coerseSql 0 pfx \"" ++ columnNameSql tName colName ++ "\" sql"
 parserColumn tName (colName, ColString _) =
-	tName ++ capitalize colName ++ " = coerseSql \"\" pfx \"" ++ colName ++ "\" sql"
+	tName ++ capitalize colName ++ " = coerseSql \"\" pfx \"" ++ columnNameSql tName colName ++ "\" sql"
 parserColumn tName (colName, ColText) =
-	tName ++ capitalize colName ++ " = coerseSql \"\" pfx \"" ++ colName ++ "\" sql"
+	tName ++ capitalize colName ++ " = coerseSql \"\" pfx \"" ++ columnNameSql tName colName ++ "\" sql"
 parserColumn tName (colName, ColDatetime) =
-	tName ++ capitalize colName ++ " = coerseSql 0 pfx \"" ++ colName ++ "\" sql"
+	tName ++ capitalize colName ++ " = coerseSql 0 pfx \"" ++ columnNameSql tName colName ++ "\" sql"
 
 {-|
 	Takes the table and returns a Haskell fragment which defines the
@@ -197,7 +197,7 @@ parserColumn tName (colName, ColDatetime) =
 createParserHs :: Table -> String
 createParserHs (tableName, cols) =
 	let cTableName = capitalize tableName in
-	"instance DbRecord " ++ cTableName ++ " where\n\tparseSql' pfx sql = \n\t\tcase Map.lookup (pfx ++ \"" ++ tableName ++ "Id\") sql of\n\t\t\tNothing -> Nothing\n\t\t\t_ -> Just $ " ++ cTableName ++ " {\n\t\t\t\t" ++ columns ++ " }"
+	"instance DbRecord " ++ cTableName ++ " where\n\tparseSql' pfx sql = \n\t\tcase Map.lookup (pfx ++ \"" ++ columnNameSql tableName "Id" ++ "\") sql of\n\t\t\tNothing -> Nothing\n\t\t\t_ -> Just $ " ++ cTableName ++ " {\n\t\t\t\t" ++ columns ++ " }"
 		where columns = intercalate ",\n\t\t\t\t" $ map (parserColumn tableName) $ ("id", ColInteger) : cols
 
 {-|
