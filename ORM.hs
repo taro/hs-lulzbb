@@ -6,11 +6,13 @@ module ORM (
 	dumpSchemaHs
 	) where
 
-import Data.Char (toLower, toUpper)
-import Data.List (intercalate)
+import Control.Arrow (second)
+import Data.Char (toLower, toUpper, isUpper)
+import Data.List (intercalate, unfoldr)
 import Data.Maybe (fromMaybe)
 import qualified Data.Map as Map
 import Database.HDBC (fromSql)
+import Text.Regex.Posix ((=~))
 
 {-|
 	Type definitions for all of the SQL types. To add a new one, you
@@ -50,6 +52,13 @@ capitalize "" = ""
 capitalize s = (toUpper . head) s : tail s
 
 {-|
+	Uncapitalizes the first letter in a string.
+-}
+uncapitalize :: String -> String
+uncapitalize "" = ""
+uncapitalize s = (toLower . head) s : tail s
+
+{-|
 	Helper function used by the generated code to extract a typed value
 	from a Map (String, SqlValue), or use a default if the key doesn't
 	exist.
@@ -77,12 +86,21 @@ typeHs (ColText) = "String"
 typeHs (ColDatetime) = "Integer"
 
 {-|
+	Helper function to transform the Haskell names to SQL names. I like to
+	use camelCase in Haskell, but PostgreSQL is case insensitive, so it's kind
+	of ugh. This might help a bit kekeke.
+-}
+columnNameSql :: String -> String -> String
+columnNameSql tableName =
+	intercalate "_" .  map uncapitalize . (tableName :) . (=~ "((^|[A-Z])[a-z]*)") 
+
+{-|
 	Takes the table name and a column and outputs the SQL fragment for
-	the CREATE TABLE statement.
+the CREATE TABLE statement.
 -}
 columnSql :: String -> (String, ColType) -> String
 columnSql tName (colName, colType) = 
-	tName ++ capitalize colName ++ " " ++ typeSql colType
+	columnNameSql tName colName ++ " " ++ typeSql colType
 
 {-|
 	Takes the table name and a column and outputs the Haskell fragment
@@ -103,7 +121,7 @@ createTableSql (tableName, cols) =
 		"CREATE TABLE \"" ++ tableName ++ "\" (\n\t" ++ pkey ++ columns ++ "\n);"
 		]
 		where 
-			pkey = tableName ++ "Id INTEGER PRIMARY KEY,\n\t"
+			pkey = columnNameSql tableName "Id" ++ " INTEGER PRIMARY KEY,\n\t"
 			columns = intercalate ",\n\t" $ map (columnSql tableName) cols
 
 {-|
@@ -127,7 +145,7 @@ getReferences (_, cols) =
 createRefSql :: Table -> String
 createRefSql t@(tableName, _) = 
 	intercalate "\n" $ map refSql $ getReferences t
-		where refSql (colName, refTable) = "ALTER TABLE \"" ++ tableName ++ "\" ADD FOREIGN KEY (" ++ tableName ++ capitalize colName ++ ") REFERENCES \"" ++ refTable ++ "\";"	
+		where refSql (colName, refTable) = "ALTER TABLE \"" ++ tableName ++ "\" ADD FOREIGN KEY (" ++ columnNameSql tableName colName ++ ") REFERENCES \"" ++ refTable ++ "\";"	
 
 {-|
 	Creates the SQL to CREATE SEQUENCE and set that sequence as the default
@@ -136,11 +154,11 @@ createRefSql t@(tableName, _) =
 -}
 createSeqSql :: Table -> String
 createSeqSql (tableName, _) =
-	let seqName = "seq" ++ capitalize tableName in
+	let seqName = columnNameSql "seq" (tableName ++ "Id") in
 	unlines [
 		"DROP SEQUENCE IF EXISTS " ++ seqName ++ ";",
 		"CREATE SEQUENCE " ++ seqName ++ ";",
-		"ALTER TABLE \"" ++ tableName ++ "\" ALTER COLUMN " ++ tableName ++ "Id SET DEFAULT NEXTVAL('" ++ seqName ++ "');"
+		"ALTER TABLE \"" ++ tableName ++ "\" ALTER COLUMN " ++ columnNameSql tableName "Id" ++ " SET DEFAULT NEXTVAL('" ++ seqName ++ "');"
 	]
 
 {-|
