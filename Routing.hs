@@ -1,6 +1,12 @@
 {-# LANGUAGE ExistentialQuantification #-}
---module Routing (parseRoutes, dumpRoutes, route, Route(..), RouteParameters) where 
-module Routing where
+module Routing (
+	parseRoutes, 
+	dumpRoutes, 
+	route, 
+	ActionTable, 
+	UrlTree, 
+	Route(..), 
+	RouteParameters) where 
 
 import Control.Exception (throw, Exception (ErrorCall))
 import Data.Char (toLower, toUpper)
@@ -48,6 +54,19 @@ type Action = RouteParameters -> IO String
 
 {-| A mapping of (moduleName, actionName) -> Action. -}
 type ActionTable = Map.Map (String, String) Action
+
+{-|
+	Hardcoded list of acceptable formats (marked as a .X at the end of
+	the request string). TODO: Make this configurable.
+-}
+formats :: [String]
+formats = ["xml", "json", "html"]
+
+{-|
+	Format to use if none is given. TODO: Make this configurable.
+-}
+defaultFormat :: String
+defaultFormat = "html"
 
 {-| 
 	Was too lazy to write a fully-fledged parser so used a simple regex
@@ -385,9 +404,14 @@ route ut at url =
 		else url' 
 			in
 
+	-- see if there's a format at the end of it
+	let (format, url''') = case url'' =~ "\\.[^./]+$" of
+		"" -> (defaultFormat, url'')
+		x -> (drop 1 x, take (length url'' - length x) url'') in
+
 	-- split the url parts apart and route the URL
-	let urlParts = split '/' $ dropWhile ((==) '/') url'' in
-	let params = fromMaybe [] $ routeUrl ut urlParts in
+	let urlParts = split '/' $ dropWhile ((==) '/') url''' in
+	let params = ("format", format) : (fromMaybe [] $ routeUrl ut urlParts) in
 
 	-- normalize the bits and pieces of the route parameters and resolve
 	let mod = formatModule $ fromMaybe "" $ lookup "module" params in
@@ -395,5 +419,5 @@ route ut at url =
 	let action = Map.lookup (mod, act) at :: Maybe Action in
 	
 	case action of
-		Just x -> x params
+		Just x -> x $ params
 		_ -> throw $ ErrorCall $ "route: No action `" ++ act ++ "' exists for module `" ++ mod ++ "' (while routing `" ++ url'' ++ "')"
