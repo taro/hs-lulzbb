@@ -201,6 +201,19 @@ createParserHs (tableName, cols) =
 		where columns = intercalate ",\n\t\t\t\t" $ map (parserColumn tableName) $ ("id", ColInteger) : cols
 
 {-|
+	Creates encode functions for each record type so all the records
+	can be dumped into a JSON-encoded string.
+-}
+createJsonEncoderHs :: Table -> String
+createJsonEncoderHs (tableName, cols) =
+	let cTableName = capitalize tableName in
+	"instance JSON " ++ cTableName ++ " where\n\tshowJSON x = makeObj [\n\t\t" ++ fields ++ "]\n\treadJSON = undefined"
+		where 
+			fields = intercalate ",\n\t\t" $ map encoderField $ ("id", ColInteger) : cols
+			encoderField (col, _) = "(\"" ++ tableName ++ capitalize col ++ "\", showJSON $ " ++ tableName ++ capitalize col ++ " x)"
+
+
+{-|
 	Takes a list of tables and returns the complete SQL listing to 
 	produce the schema. (CREATE TABLE and ADD FOREIGN KEY). First
 	argument is a prefix which is appended to all table names.
@@ -225,6 +238,12 @@ dumpParserHs :: [Table] -> String
 dumpParserHs = intercalate "\n\n" . map createParserHs
 
 {-|
+	Crafts JSON encoders from a list of tables.
+-}
+dumpJsonEncoderHs :: [Table] -> String
+dumpJsonEncoderHs = intercalate "\n\n" . map createJsonEncoderHs
+
+{-|
 	Converts the list of tables into a complete Haskell source file which
 	defines all the records (and functionality to map those records out
 	of a Map (String, SqlValue)) for the tables.
@@ -233,13 +252,18 @@ dumpParserHs = intercalate "\n\n" . map createParserHs
 -}
 dumpSchemaHs :: String -> [Table] -> String
 dumpSchemaHs siteName tbls =
-	header ++ dumpRecordHs tbls ++ "\n\n" ++ dumpParserHs tbls
-		where header =
-			unlines [
+	intercalate "\n\n" [
+		header,
+		dumpRecordHs tbls,
+		dumpParserHs tbls,
+		dumpJsonEncoderHs tbls
+		] where
+			header = unlines [
 				"module " ++ siteName ++ ".ORM where",
 				"import Database.HDBC (SqlValue)",
 				"import qualified Data.Map as Map",
 				"import ORM",
+				"import Text.Json (encode, toJSObject)",
 				"",
 				"parseSql :: DbRecord a => Map.Map String SqlValue -> Maybe a",
 				"parseSql = parseSql' \"\"",
