@@ -1,6 +1,6 @@
 index:
   url: /
-  param: { module: Index, action: view }
+  param: { module: Forum, action: list }
 
 forum:
   url: /:forum
