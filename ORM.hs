@@ -197,8 +197,12 @@ parserColumn tName (colName, ColDatetime) =
 createParserHs :: Table -> String
 createParserHs (tableName, cols) =
 	let cTableName = capitalize tableName in
-	"instance DbRecord " ++ cTableName ++ " where\n\tparseSql' pfx sql = \n\t\tcase Map.lookup (pfx ++ \"" ++ columnNameSql tableName "Id" ++ "\") sql of\n\t\t\tNothing -> Nothing\n\t\t\t_ -> Just $ " ++ cTableName ++ " {\n\t\t\t\t" ++ columns ++ " }"
-		where columns = intercalate ",\n\t\t\t\t" $ map (parserColumn tableName) $ ("id", ColInteger) : cols
+	"instance DbRecord " ++ cTableName ++ " where\n\tparseSql' pfx sql = \n\t\tcase Map.lookup (pfx ++ \"" ++ columnNameSql tableName "Id" ++ "\") sql of\n\t\t\tNothing -> Nothing\n\t\t\t_ -> Just $ " ++ cTableName ++ " {\n\t\t\t\t" ++ columns ++ " }\n\t" ++ createAscList "" "show" ++ "\n\t" ++ createAscList "JSON" "showJSON"
+		where 
+			columns = intercalate ",\n\t\t\t" $ map (parserColumn tableName) $ ("id", ColInteger) : cols
+			createAscList n enc = "toAscList" ++ n ++ " rec = [\n\t\t" ++ fields enc ++ "]"
+			fields enc = intercalate ",\n\t\t\t" $ map (encoderField enc) $ ("id", ColInteger) : cols
+			encoderField enc (col, _) = "(\"" ++ tableName ++ capitalize col ++ "\", " ++ enc ++ " $ " ++ tableName ++ capitalize col ++ " rec)"
 
 {-|
 	Creates encode functions for each record type so all the records
@@ -207,10 +211,7 @@ createParserHs (tableName, cols) =
 createJsonEncoderHs :: Table -> String
 createJsonEncoderHs (tableName, cols) =
 	let cTableName = capitalize tableName in
-	"instance JSON " ++ cTableName ++ " where\n\tshowJSON x = makeObj [\n\t\t" ++ fields ++ "]\n\treadJSON = undefined"
-		where 
-			fields = intercalate ",\n\t\t" $ map encoderField $ ("id", ColInteger) : cols
-			encoderField (col, _) = "(\"" ++ tableName ++ capitalize col ++ "\", showJSON $ " ++ tableName ++ capitalize col ++ " x)"
+	"instance JSON " ++ cTableName ++ " where\n\tshowJSON = makeObj . toAscListJSON\n\treadJSON = undefined"
 
 
 {-|
@@ -263,11 +264,13 @@ dumpSchemaHs siteName tbls =
 				"import Database.HDBC (SqlValue)",
 				"import qualified Data.Map as Map",
 				"import ORM",
-				"import Text.Json (encode, toJSObject)",
+				"import Text.JSON (JSON(..), JSValue(..), makeObj)",
 				"",
 				"parseSql :: DbRecord a => Map.Map String SqlValue -> Maybe a",
 				"parseSql = parseSql' \"\"",
 				"",
 				"class DbRecord a where",
 				"\tparseSql' :: String -> Map.Map String SqlValue -> Maybe a",
-				""]
+				"\ttoAscList :: a -> [(String, String)]",
+				"\ttoAscListJSON :: a -> [(String, JSValue)]"
+				]
