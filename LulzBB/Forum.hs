@@ -1,13 +1,18 @@
-module LulzBB.Forum where
+module LulzBB.Forum (
+	list,
+	view,
+	post
+	) where
+
 import Control.Monad (liftM)
 import Data.Maybe (fromMaybe)
 import Database.HDBC
 import LulzBB.ORM
 import Routing (RouteParameters)
 import Text.JSON (encode)
+import Text.StringTemplate
 
-list :: IConnection a => a -> RouteParameters -> IO String
-list db params = do
+list db tpls params = do
 	stm <- prepare db "SELECT * FROM s_forum"
 	execute stm []
 	fs <- liftM (map (fromMaybe undefined . parseSql)) $ fetchAllRowsMap stm :: IO [Forum]
@@ -16,9 +21,7 @@ list db params = do
 		Just "json" -> return $ encode fs
 		_ -> undefined
 
-view :: IConnection a => a -> RouteParameters -> IO String
-view db params = return "view forum"
+view db tpls params = return "view forum"
 
-post :: IConnection a => a -> RouteParameters -> IO String
-post db params = return "post forum"
+post db tpls params = return "post forum"
 

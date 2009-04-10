@@ -13,7 +13,7 @@ main :: IO ()
 main = do
 	-- TODO: Un-hardcode this
 	db <- liftIO $ connectPostgreSQL "user=hark"
-	at <- getActionTable db
+	at <- getActionTable db "LulzBB/tpls/"
 	ut <- getUrlTree
 
 	runCGI $ handleErrors $ handler db ut at
