@@ -197,7 +197,7 @@ parserColumn tName (colName, ColDatetime) =
 createParserHs :: Table -> String
 createParserHs (tableName, cols) =
 	let cTableName = capitalize tableName in
-	"instance DbRecord " ++ cTableName ++ " where\n\tparseSql' pfx sql = \n\t\tcase Map.lookup (pfx ++ \"" ++ columnNameSql tableName "Id" ++ "\") sql of\n\t\t\tNothing -> Nothing\n\t\t\t_ -> Just $ " ++ cTableName ++ " {\n\t\t\t\t" ++ columns ++ " }\n\t" ++ createAscList "" "show" ++ "\n\t" ++ createAscList "JSON" "showJSON"
+	"instance DbRecord " ++ cTableName ++ " where\n\trecId = " ++ tableName ++ "Id\n\tparseSql' pfx sql = \n\t\tcase Map.lookup (pfx ++ \"" ++ columnNameSql tableName "Id" ++ "\") sql of\n\t\t\tNothing -> Nothing\n\t\t\t_ -> Just $ " ++ cTableName ++ " {\n\t\t\t\t" ++ columns ++ " }\n\t" ++ createAscList "" "show" ++ "\n\t" ++ createAscList "JSON" "showJSON"
 		where 
 			columns = intercalate ",\n\t\t\t" $ map (parserColumn tableName) $ ("id", ColInteger) : cols
 			createAscList n enc = "toAscList" ++ n ++ " rec = [\n\t\t" ++ fields enc ++ "]"
@@ -265,6 +265,8 @@ dumpSchemaHs siteName tbls =
 				"import qualified Data.Map as Map",
 				"import ORM",
 				"import Text.JSON (JSON(..), JSValue(..), makeObj)",
+				"import Text.StringTemplate (STGroup, toString, setManyAttrib)",
+				"import View (getTemplate)",
 				"",
 				"parseSql :: DbRecord a => Map.Map String SqlValue -> Maybe a",
 				"parseSql = parseSql' \"\"",
@@ -272,5 +274,12 @@ dumpSchemaHs siteName tbls =
 				"class DbRecord a where",
 				"\tparseSql' :: String -> Map.Map String SqlValue -> Maybe a",
 				"\ttoAscList :: a -> [(String, String)]",
-				"\ttoAscListJSON :: a -> [(String, JSValue)]"
+				"\ttoAscListJSON :: a -> [(String, JSValue)]",
+				"\trecId :: a -> Integer",
+				"",
+				"xformDbRecord :: (DbRecord a) => STGroup String -> (Integer -> [String]) -> a -> String",
+				"xformDbRecord tpls sugg rec = ",
+				"\tlet suggs = sugg $ recId rec in",
+				"\tlet tpl = getTemplate tpls suggs in",
+				"\ttoString $ setManyAttrib (toAscList rec) tpl"
 				]

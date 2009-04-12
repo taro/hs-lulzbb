@@ -11,6 +11,7 @@ import LulzBB.ORM
 import Routing (RouteParameters)
 import Text.JSON (encode)
 import Text.StringTemplate
+import View
 
 list db tpls params = do
 	stm <- prepare db "SELECT * FROM s_forum"
@@ -19,7 +20,13 @@ list db tpls params = do
 
 	case lookup "format" params of
 		Just "json" -> return $ encode fs
-		_ -> undefined
+		_ -> do
+			-- Pass each forum through the appropriate template
+			let suggs = suggestions "Forum" "list" "forum"
+			let fs' = map (xformDbRecord tpls suggs) fs
+
+			-- Pass the results through the page template
+			return $ concat fs'
 
 view db tpls params = return "view forum"
 
