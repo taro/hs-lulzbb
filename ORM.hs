@@ -213,7 +213,6 @@ createJsonEncoderHs (tableName, cols) =
 	let cTableName = capitalize tableName in
 	"instance JSON " ++ cTableName ++ " where\n\tshowJSON = makeObj . toAscListJSON\n\treadJSON = undefined"
 
-
 {-|
 	Takes a list of tables and returns the complete SQL listing to 
 	produce the schema. (CREATE TABLE and ADD FOREIGN KEY). First

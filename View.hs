@@ -30,12 +30,12 @@ suggestions mod act sec id =
 	let lact = map toLower act in
 	let lsec = map toLower sec in
 	[
-		lmod ++ "-" ++ lact ++ "-" ++ lsec ++ "-" ++ sid ++ ".tpl",
-		lmod ++ "-" ++ lact ++ "-" ++ lsec ++ ".tpl",
-		lmod ++ "-" ++ lsec ++ "-" ++ sid ++ ".tpl",
-		lmod ++ "-" ++ lsec ++ ".tpl",
-		lsec ++ "-" ++ sid ++ ".tpl",
-		lsec ++ "-" ++ ".tpl"
+		lmod ++ "-" ++ lact ++ "-" ++ lsec ++ "-" ++ sid,
+		lmod ++ "-" ++ lact ++ "-" ++ lsec,
+		lmod ++ "-" ++ lsec ++ "-" ++ sid,
+		lmod ++ "-" ++ lsec,
+		lsec ++ "-" ++ sid,
+		lsec
 	]
 
 {-|
