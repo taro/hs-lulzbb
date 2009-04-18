@@ -1,19 +1,21 @@
 module Main where
-import Control.Exception (handle, Exception (NoMethodError))
+import Control.Exception (throw, handle, Exception (NoMethodError, ErrorCall))
 import Control.Monad (liftM)
 import Data.List (isPrefixOf)
 import Database.HDBC (commit, disconnect, IConnection (..))
 import Database.HDBC.PostgreSQL (connectPostgreSQL)
+import LulzBB.Main
 import Network.CGI
 import Network.URI (uriPath)
-import LulzBB.Main
 import Routing
+import System.Directory (setCurrentDirectory)
 
 main :: IO ()
 main = do
 	-- TODO: Un-hardcode this
+	setCurrentDirectory "/usr/home/hark/dev/hs-lulzbb/"
 	db <- liftIO $ connectPostgreSQL "user=hark"
-	at <- getActionTable db "LulzBB/tpls/"
+	at <- getActionTable db "LulzBB/Templates/"
 	ut <- getUrlTree
 
 	runCGI $ handleErrors $ handler db ut at
@@ -41,7 +43,7 @@ handler db ut at = do
 	let action = route ut at req
 
 	-- Execute the action
-	res <- liftIO action
+	res <- liftIO action 
 
 	-- Commit the database changes
 	liftIO $ commit db
