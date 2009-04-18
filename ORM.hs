@@ -199,9 +199,11 @@ createParserHs (tableName, cols) =
 	let cTableName = capitalize tableName in
 	"instance DbRecord " ++ cTableName ++ " where\n\trecId = " ++ tableName ++ "Id\n\tparseSql' pfx sql = \n\t\tcase Map.lookup (pfx ++ \"" ++ columnNameSql tableName "Id" ++ "\") sql of\n\t\t\tNothing -> Nothing\n\t\t\t_ -> Just $ " ++ cTableName ++ " {\n\t\t\t\t" ++ columns ++ " }\n\t" ++ createAscList "" "show" ++ "\n\t" ++ createAscList "JSON" "showJSON"
 		where 
-			columns = intercalate ",\n\t\t\t" $ map (parserColumn tableName) $ ("id", ColInteger) : cols
+			columns = intercalate ",\n\t\t\t\t" $ map (parserColumn tableName) $ ("id", ColInteger) : cols
 			createAscList n enc = "toAscList" ++ n ++ " rec = [\n\t\t" ++ fields enc ++ "]"
-			fields enc = intercalate ",\n\t\t\t" $ map (encoderField enc) $ ("id", ColInteger) : cols
+			fields enc = intercalate ",\n\t\t" $ map (encoderField enc) $ ("id", ColInteger) : cols
+			encoderField "show" (col, ColString _) = "(\"" ++ tableName ++ capitalize col ++ "\", " ++ tableName ++ capitalize col ++ " rec)"
+			encoderField "show" (col, ColText) = "(\"" ++ tableName ++ capitalize col ++ "\", " ++ tableName ++ capitalize col ++ " rec)"
 			encoderField enc (col, _) = "(\"" ++ tableName ++ capitalize col ++ "\", " ++ enc ++ " $ " ++ tableName ++ capitalize col ++ " rec)"
 
 {-|
