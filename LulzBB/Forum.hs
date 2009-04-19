@@ -26,7 +26,13 @@ list db tpls params = do
 			let fs' = map (xformDbRecord tpls suggs) fs
 
 			-- Pass the results through the page template
-			return $ concat fs'
+			let Just tpl = getStringTemplate "page-forum-list" tpls
+
+			let attrs = [
+				("forums", fs')
+				]
+
+			return $ toString $ setManyAttrib attrs tpl
 
 view db tpls params = return "view forum"
 
