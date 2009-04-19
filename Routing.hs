@@ -390,7 +390,7 @@ routeUrl (RouteEnd x) _ =
 
 	If there is neither, it uses the site's index action.
 -}
-route ::  UrlTree -> ActionTable -> String -> IO String
+route ::  UrlTree -> ActionTable -> String -> (IO String, String)
 route ut at url = 
 	-- chop off a trailing '/', if one exists
 	let url' = if (not $ null url) && (last url == '/')
@@ -419,5 +419,5 @@ route ut at url =
 	let action = Map.lookup (mod, act) at :: Maybe Action in
 	
 	case action of
-		Just x -> x $ params
+		Just x -> (x params, format)
 		_ -> throw $ ErrorCall $ "route: No action `" ++ act ++ "' exists for module `" ++ mod ++ "' (while routing `" ++ url'' ++ "')"

@@ -2,6 +2,7 @@ module Main where
 import Control.Exception (throw, handle, Exception (NoMethodError, ErrorCall))
 import Control.Monad (liftM)
 import Data.List (isPrefixOf)
+import Data.Maybe (fromMaybe)
 import Database.HDBC (commit, disconnect, IConnection (..))
 import Database.HDBC.PostgreSQL (connectPostgreSQL)
 import LulzBB.Main
@@ -21,8 +22,17 @@ main = do
 	runCGI $ handleErrors $ handler db ut at
 		`catchCGI` (\e -> (liftIO $ disconnect db) >> throwCGI e)
 
+resolveFormatMime :: String -> String
+resolveFormatMime format = fromMaybe "text/html" $ lookup format [
+	("html", "text/html"),
+	("xml", "text/xml"),
+	("rss", "application/rss+xml"),
+	("json", "application/json")
+	]
+
 handler :: IConnection a => a -> UrlTree -> ActionTable -> CGI CGIResult
 handler db ut at = do
+	-- Set a default Content-Type (for errors and stuff)
 	setHeader "Content-Type" "text/plain"
 
 	-- TODO: Un-hardcode this
@@ -40,10 +50,16 @@ handler db ut at = do
 		else return ()
 
 	let req = (drop (length baseurl) fullurl)
-	let action = route ut at req
+	let (action, format) = route ut at req
 
 	-- Execute the action
 	res <- liftIO action 
+
+	{- 
+		Set the proper headers, but only after the action has
+		been executed (so errors will be returned as text/plain)
+	-}
+	setHeader "Content-Type" $ resolveFormatMime format
 
 	-- Commit the database changes
 	liftIO $ commit db
