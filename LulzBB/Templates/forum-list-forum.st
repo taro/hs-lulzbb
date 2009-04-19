@@ -3,7 +3,7 @@
 		<img src="$baseUrl$img/futaba/desuround6.png"/>
 	</td>
 	<td class="forum-row row1">
-		<a href="$baseUrl$forum/$forumId$" class="clean">
+		<a href="$baseUrl$$forumId$" class="clean">
 			<b>$forumName$</b>
 		</a>
 		<br/>

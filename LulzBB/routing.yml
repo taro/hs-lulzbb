@@ -4,6 +4,10 @@ index:
 
 forum:
   url: /:forum
+  param: { module: Forum, action: view, page: 0 }
+
+forum_page:
+  url: /:forum/p/:page
   param: { module: Forum, action: view }
 
 forum_post:
@@ -15,7 +19,7 @@ thread:
   param: { module: Thread, action: view, page: 0 }
 
 thread_page:
-  url: /:forum/:thread/:page
+  url: /:forum/:thread/p/:page
   param: { module: Thread, action: view }
 
 thread_post:

@@ -83,7 +83,7 @@ typeHs (ColReference x) = "Maybe " ++ capitalize x
 typeHs (ColInteger) = "Integer"
 typeHs (ColString _) = "String"
 typeHs (ColText) = "String"
-typeHs (ColDatetime) = "Integer"
+typeHs (ColDatetime) = "LocalTime"
 
 {-|
 	Helper function to transform the Haskell names to SQL names. I like to
@@ -179,16 +179,16 @@ createRecordHs (tableName, cols) =
 	call parseSql' for ColReferences.
 -}
 parserColumn :: String -> (String, ColType) -> String
-parserColumn tName (colName, ColReference _) = 
-	tName ++ capitalize colName ++ " = parseSql' pfx sql"
-parserColumn tName (colName, ColInteger) = 
-	tName ++ capitalize colName ++ " = coerseSql 0 pfx \"" ++ columnNameSql tName colName ++ "\" sql"
-parserColumn tName (colName, ColString _) =
-	tName ++ capitalize colName ++ " = coerseSql \"\" pfx \"" ++ columnNameSql tName colName ++ "\" sql"
-parserColumn tName (colName, ColText) =
-	tName ++ capitalize colName ++ " = coerseSql \"\" pfx \"" ++ columnNameSql tName colName ++ "\" sql"
-parserColumn tName (colName, ColDatetime) =
-	tName ++ capitalize colName ++ " = coerseSql 0 pfx \"" ++ columnNameSql tName colName ++ "\" sql"
+parserColumn tName (colName, colType@(ColReference _)) = 
+	tName ++ capitalize colName ++ " = Nothing :: " ++ typeHs colType  --parseSql' pfx sql"
+parserColumn tName (colName, colType@(ColInteger)) = 
+	tName ++ capitalize colName ++ " = coerseSql 0 pfx \"" ++ columnNameSql tName colName ++ "\" sql :: " ++ typeHs colType
+parserColumn tName (colName, colType@(ColString _)) =
+	tName ++ capitalize colName ++ " = coerseSql \"\" pfx \"" ++ columnNameSql tName colName ++ "\" sql :: " ++ typeHs colType
+parserColumn tName (colName, colType@(ColText)) =
+	tName ++ capitalize colName ++ " = coerseSql \"\" pfx \"" ++ columnNameSql tName colName ++ "\" sql :: " ++ typeHs colType
+parserColumn tName (colName, colType@(ColDatetime)) =
+	tName ++ capitalize colName ++ " = coerseSql (error \"Unable to coerse DateTime\") pfx \"" ++ columnNameSql tName colName ++ "\" sql :: " ++ typeHs colType
 
 {-|
 	Takes the table and returns a Haskell fragment which defines the
@@ -204,6 +204,7 @@ createParserHs (tableName, cols) =
 			fields enc = intercalate ",\n\t\t" $ map (encoderField enc) $ ("id", ColInteger) : cols
 			encoderField "show" (col, ColString _) = "(\"" ++ tableName ++ capitalize col ++ "\", " ++ tableName ++ capitalize col ++ " rec)"
 			encoderField "show" (col, ColText) = "(\"" ++ tableName ++ capitalize col ++ "\", " ++ tableName ++ capitalize col ++ " rec)"
+			encoderField "showJSON" (col, ColDatetime) = "(\"" ++ tableName ++ capitalize col ++ "\", showJSON $ show $ " ++ tableName ++ capitalize col ++ " rec)"
 			encoderField enc (col, _) = "(\"" ++ tableName ++ capitalize col ++ "\", " ++ enc ++ " $ " ++ tableName ++ capitalize col ++ " rec)"
 
 {-|
@@ -262,6 +263,7 @@ dumpSchemaHs siteName tbls =
 		] where
 			header = unlines [
 				"module " ++ siteName ++ ".ORM where",
+				"import Data.Time",
 				"import Database.HDBC (SqlValue)",
 				"import qualified Data.Map as Map",
 				"import ORM",
