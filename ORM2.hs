@@ -261,14 +261,23 @@ genParseSqlHs (rawTableName, cols) =
 	FunD funName [Clause [] (NormalB eFun) []]
 	where
 		funName = mkName "parseSql'"
+		-- \ pfx sql -> eCase
 		eFun = LamE [VarP $ mkName "pfx", VarP $ mkName "sql"] eCase
+		-- case eLookup of
 		eCase = CaseE eLookup [matchNothing, matchElse]
+		-- Data.Map.lookup 
 		eLookup = AppE (VarE $ mkName "Data.Map.lookup") eIdColName
+		-- pfx ++ 
 		eIdColName' = AppE (VarE $ mkName "++") $ VarE $ mkName "pfx"
+		-- "table_id"
 		eIdColName = AppE eIdColName' $ LitE $ StringL $ genColNameSql rawTableName "id"
+		-- Nothing -> eNothing
 		matchNothing = Match (ConP (mkName "Nothing") []) (NormalB eNothing) []
+		-- _ -> eElse
 		matchElse = Match WildP (NormalB eElse) []
+		-- Nothing
 		eNothing = ConE $ mkName "Nothing"
+		-- Just $ TableName {...}
 		eElse = AppE (ConE $ mkName "Just") $ RecConE (mkName $ genTableNameSql rawTableName) $ map (genParseColHs rawTableName) cols
 
 {-|
